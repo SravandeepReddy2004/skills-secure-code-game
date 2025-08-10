@@ -15,7 +15,8 @@ const libxmljs = require("libxmljs");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const { exec } = require("node:child_process");
+const { execFile } = require("node:child_process");
+const shellQuote = require("shell-quote");
 const app = express();
 
 app.use(bodyParser.json());
@@ -69,10 +70,25 @@ app.post("/ufo", (req, res) => {
         xmlDoc.toString().includes('SYSTEM "') &&
         xmlDoc.toString().includes(".admin")
       ) {
-        extractedContent.forEach((command) => {
-          exec(command, (err, output) => {
+        // Only allow certain commands for security
+        const ALLOWED_COMMANDS = ["ls", "cat", "echo"];
+        extractedContent.forEach((commandStr) => {
+          // Parse command string safely
+          const parsed = shellQuote.parse(commandStr);
+          if (!Array.isArray(parsed) || parsed.length === 0) {
+            res.status(400).send("Invalid command");
+            return;
+          }
+          const cmd = parsed[0];
+          const args = parsed.slice(1);
+          if (!ALLOWED_COMMANDS.includes(cmd)) {
+            res.status(403).send("Command not allowed");
+            return;
+          }
+          execFile(cmd, args, (err, output) => {
             if (err) {
               console.error("could not execute command: ", err);
+              res.status(500).send("Command execution failed");
               return;
             }
             console.log("Output: \n", output);
