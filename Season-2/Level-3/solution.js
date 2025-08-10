@@ -3,7 +3,8 @@
 
 const express = require("express");
 const bodyParser = require("body-parser");
-const libxmljs = require("libxmljs");
+// const libxmljs = require("libxmljs");
+const sax = require("sax");
 const multer = require("multer");
 const app = express();
 
@@ -29,28 +30,30 @@ app.post("/ufo", (req, res) => {
     res.status(200).json({ ufo: "Received JSON data from an unknown planet." });
   } else if (contentType === "application/xml") {
     try {
-      const xmlDoc = libxmljs.parseXml(req.body, {
-        replaceEntities: false, // Disabled the option to replace XML entities
-        recover: false, // Disabled the parser to recover from certain parsing errors
-        nonet: true, // Disabled network access when parsing
-      });
-
-      console.log("Received XML data from XMLon:", xmlDoc.toString());
-
       const extractedContent = [];
+      const parser = sax.parser(true); // strict mode
+      let currentText = "";
+      parser.onopentag = function (node) {
+        currentText = "";
+      };
+      parser.ontext = function (text) {
+        currentText += text;
+      };
+      parser.onclosetag = function (tagName) {
+        if (currentText.trim().length > 0) {
+          extractedContent.push(currentText.trim());
+        }
+        currentText = "";
+      };
+      parser.onerror = function (e) {
+        throw e;
+      };
+      parser.write(req.body).close();
 
-      xmlDoc
-        .root()
-        .childNodes()
-        .forEach((node) => {
-          if (node.type() === "element") {
-            extractedContent.push(node.text());
-          }
-        });
-
+      // Check for suspicious SYSTEM entity or .admin references in raw XML
       if (
-        xmlDoc.toString().includes('SYSTEM "') &&
-        xmlDoc.toString().includes(".admin")
+        req.body.includes('SYSTEM "') &&
+        req.body.includes(".admin")
       ) {
         // Removed the code to execute commands within the .admin file on the server
         res.status(400).send("Invalid XML");         
