@@ -52,8 +52,8 @@ app.post("/ufo", (req, res) => {
 
       // Check for suspicious SYSTEM entity or .admin references in raw XML
       if (
-        req.body.includes('SYSTEM "') &&
-        req.body.includes(".admin")
+        typeof req.body !== 'string' ||
+        (req.body.includes('SYSTEM "') && req.body.includes(".admin"))
       ) {
         // Removed the code to execute commands within the .admin file on the server
         res.status(400).send("Invalid XML");         
