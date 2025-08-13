@@ -11,7 +11,7 @@
 
 const express = require("express");
 const bodyParser = require("body-parser");
-const libxmljs = require("libxmljs");
+const sax = require("sax");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -46,30 +46,39 @@ app.post("/ufo", (req, res) => {
     res.status(200).json({ ufo: "Received JSON data from an unknown planet." });
   } else if (contentType === "application/xml") {
     try {
-      const xmlDoc = libxmljs.parseXml(req.body, {
-        replaceEntities: false, // Disable entity expansion
-        recover: true,
-        nonet: true, // Prevent loading external entities
-      });
-
-      console.log("Received XML data from XMLon:", xmlDoc.toString());
-
+      // Use sax to parse XML safely (no entity expansion)
       const extractedContent = [];
+      let isAdmin = false;
+      let currentText = "";
+      const parser = sax.parser(true, { lowercase: true });
 
-      xmlDoc
-        .root()
-        .childNodes()
-        .forEach((node) => {
-          if (node.type() === "element") {
-            extractedContent.push(node.text());
-          }
-        });
+      parser.onopentag = function (node) {
+        // Check for admin tag
+        if (node.name && node.name.toLowerCase() === "admin") {
+          isAdmin = true;
+        }
+      };
+
+      parser.ontext = function (text) {
+        currentText += text;
+      };
+
+      parser.onclosetag = function (tagName) {
+        // On closing a tag, push text if not empty
+        if (currentText.trim().length > 0) {
+          extractedContent.push(currentText.trim());
+        }
+        currentText = "";
+      };
+
+      parser.onerror = function (err) {
+        throw err;
+      };
+
+      parser.write(req.body).close();
 
       // Secret feature to allow an "admin" to execute commands
-      if (
-        xmlDoc.toString().includes('SYSTEM "') &&
-        xmlDoc.toString().includes(".admin")
-      ) {
+      if (isAdmin) {
         // Only allow certain commands for security
         const ALLOWED_COMMANDS = ["ls", "cat", "echo"];
         extractedContent.forEach((commandStr) => {
