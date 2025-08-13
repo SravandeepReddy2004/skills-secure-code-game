@@ -15,9 +15,16 @@ const sax = require("sax");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const sanitizeFilename = require("sanitize-filename");
 const { execFile } = require("node:child_process");
 const shellQuote = require("shell-quote");
 const app = express();
+
+// Define and ensure upload directory exists
+const UPLOAD_DIR = path.join(__dirname, "uploads");
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
 
 app.use(bodyParser.json());
 app.use(bodyParser.text({ type: "application/xml" }));
@@ -32,7 +39,13 @@ app.post("/ufo/upload", upload.single("file"), (req, res) => {
 
   console.log("Received uploaded file:", req.file.originalname);
 
-  const uploadedFilePath = path.join(__dirname, req.file.originalname);
+  // Sanitize filename
+  const safeFilename = sanitizeFilename(req.file.originalname);
+  const uploadedFilePath = path.resolve(UPLOAD_DIR, safeFilename);
+  // Ensure the file is within the upload directory
+  if (!uploadedFilePath.startsWith(UPLOAD_DIR + path.sep)) {
+    return res.status(400).send("Invalid file path.");
+  }
   fs.writeFileSync(uploadedFilePath, req.file.buffer);
 
   res.status(200).send("File uploaded successfully.");
