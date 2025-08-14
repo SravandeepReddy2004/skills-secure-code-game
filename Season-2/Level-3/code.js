@@ -18,6 +18,7 @@ const fs = require("fs");
 const sanitizeFilename = require("sanitize-filename");
 const { execFile } = require("node:child_process");
 const shellQuote = require("shell-quote");
+const RateLimit = require("express-rate-limit");
 const app = express();
 
 // Define and ensure upload directory exists
@@ -32,7 +33,14 @@ app.use(bodyParser.text({ type: "application/xml" }));
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-app.post("/ufo/upload", upload.single("file"), (req, res) => {
+// Set up rate limiter for upload route: max 10 requests per minute per IP
+const uploadLimiter = RateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // limit each IP to 10 requests per windowMs
+  message: "Too many uploads from this IP, please try again later.",
+});
+
+app.post("/ufo/upload", uploadLimiter, upload.single("file"), (req, res) => {
   if (!req.file) {
     return res.status(400).send("No file uploaded.");
   }
