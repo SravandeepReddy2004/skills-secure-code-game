@@ -27,13 +27,11 @@ class TaxPayer:
         if not path:
             pass
 
-        # defends against path traversal attacks
-        if path.startswith('/') or path.startswith('..'):
-            return None
-
-        # builds path
-        base_dir = os.path.dirname(os.path.abspath(__file__))
+        # Defend against path traversal attacks
+        base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profile_pictures")
         prof_picture_path = os.path.normpath(os.path.join(base_dir, path))
+        if not prof_picture_path.startswith(base_dir):
+            return None
 
         with open(prof_picture_path, 'rb') as pic:
             picture = bytearray(pic.read())
