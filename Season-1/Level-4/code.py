@@ -12,6 +12,7 @@ the tests.py again to recreate it.
 import sqlite3
 import os
 from flask import Flask, request
+import re
 
 ### Unrelated to the exercise -- Starts here -- Please ignore
 app = Flask(__name__)
@@ -230,17 +231,32 @@ class DB_CRUD_ops(object):
 
             res = "[METHOD EXECUTED] exec_user_script\n"
             res += "[QUERY] " + query + "\n"
-            if ';' in query:
-                res += "[SCRIPT EXECUTION]"
-                cur.executescript(query)
-                db_con.commit()
+            # Only allow single SELECT statements, no semicolons, and no dangerous keywords
+            lowered = query.strip().lower()
+            forbidden = [';', 'drop', 'delete', 'update', 'insert', 'alter', 'exec', 'create', 'replace']
+            if not lowered.startswith('select') or any(f in lowered for f in forbidden):
+                res += "[ERROR] Only single SELECT statements are allowed.\n"
+                return res
             else:
-                cur.execute(query)
+                # For demonstration, we assume the query is of the form:
+                # SELECT ... FROM ... WHERE ... = ?
+                # If the user wants to filter by symbol, they should use a placeholder.
+                # We'll extract the symbol value from request.args if present.
+                # But since we only have 'query' here, we just execute as a parameterized query.
+                # We'll use a simple regex to check for a WHERE clause with a symbol.
+                import re
+                match = re.search(r"where\s+symbol\s*=\s*'([^']+)'", lowered)
+                if match:
+                    symbol = match.group(1)
+                    safe_query = re.sub(r"where\s+symbol\s*=\s*'[^']+'", "where symbol = ?", query, flags=re.IGNORECASE)
+                    cur.execute(safe_query, (symbol,))
+                else:
+                    cur.execute(query)
                 db_con.commit()
                 query_outcome = cur.fetchall()
                 for result in query_outcome:
                     res += "[RESULT] " + str(result)
-            return res
+                return res
 
         except sqlite3.Error as e:
             print(f"ERROR: {e}")
