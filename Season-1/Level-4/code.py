@@ -252,14 +252,14 @@ class DB_CRUD_ops(object):
                     cur.execute(safe_query, (symbol,))
                 else:
                     # Only allow queries that match a safe SELECT pattern
-                    # For demonstration, only allow SELECT statements with a WHERE clause on symbol
-                    match = re.search(r"select\s+.*\s+from\s+\w+\s+where\s+symbol\s*=\s*'([^']+)'", lowered)
+                    # Only allow queries of the form: SELECT ... FROM stocks WHERE symbol = '...'
+                    match = re.match(r"^select\s+\*\s+from\s+stocks\s+where\s+symbol\s*=\s*'([^']+)'$", lowered)
                     if match:
                         symbol = match.group(1)
-                        safe_query = re.sub(r"where\s+symbol\s*=\s*'[^']+'", "where symbol = ?", query, flags=re.IGNORECASE)
+                        safe_query = "SELECT * FROM stocks WHERE symbol = ?"
                         cur.execute(safe_query, (symbol,))
                     else:
-                        res += "[ERROR] Only SELECT statements with a WHERE clause on symbol are allowed.\n"
+                        res += "[ERROR] Only queries of the form: SELECT * FROM stocks WHERE symbol = '<symbol>' are allowed.\n"
                         return res
                 db_con.commit()
                 query_outcome = cur.fetchall()
