@@ -248,7 +248,7 @@ class DB_CRUD_ops(object):
                 match = re.search(r"where\s+symbol\s*=\s*'([^']+)'", lowered)
                 if match:
                     symbol = match.group(1)
-                    safe_query = re.sub(r"where\s+symbol\s*=\s*'[^']+'", "where symbol = ?", query, flags=re.IGNORECASE)
+                    safe_query = "SELECT * FROM stocks WHERE symbol = ?"
                     cur.execute(safe_query, (symbol,))
                 else:
                     # Only allow queries that match a safe SELECT pattern
