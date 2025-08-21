@@ -3,7 +3,6 @@ import code as c
 
 class TestOnlineStore(unittest.TestCase):
 
-    # Tricks the system and walks away with 1 television, despite valid payment & reimbursement
     def test_6(self):
         tv_item = c.Item(type='product', description='tv', amount=1000.00, quantity=1)
         payment = c.Item(type='payment', description='invoice_4', amount=1e19, quantity=1)
