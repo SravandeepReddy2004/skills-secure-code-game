@@ -25,7 +25,6 @@ class TestOnlineStore(unittest.TestCase):
         order_1 = c.Order(id='1', items=items)
         self.assertEqual(c.validorder(order_1), 'Total amount payable for an order exceeded')
 
-        # Put payments before products
         items = items[1:] + [items[0]]
         order_2 = c.Order(id='2', items=items)
         self.assertEqual(c.validorder(order_2), 'Total amount payable for an order exceeded')
