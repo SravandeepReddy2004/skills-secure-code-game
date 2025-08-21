@@ -17,7 +17,6 @@ class TestOnlineStore(unittest.TestCase):
         order_5 = c.Order(id='5', items=[small_item, payment_1, payment_2])
         self.assertEqual(c.validorder(order_5), 'Order ID: 5 - Full payment received!')
 
-    # The total amount payable in an order should be limited
     def test_8(self):
         num_items = 12
         items = [c.Item(type='product', description='tv', amount=99999, quantity=num_items)]
